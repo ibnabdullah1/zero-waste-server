@@ -29,6 +29,16 @@ async function run() {
     // await client.connect();
     const foodCollection = client.db("foodDB").collection("foods");
 
+    app.get("/searchFood/:name", async (req, res) => {
+      const name = req.params.name;
+      const result = await foodCollection
+        .find({
+          $or: [{ Food_Name: { $regex: name, $options: "i" } }],
+        })
+        .toArray();
+      res.send(result);
+    });
+
     app.get("/highestQuantity", async (req, res) => {
       const cursor = foodCollection.find().sort({ Quantity: 1 });
 
