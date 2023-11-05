@@ -29,6 +29,20 @@ async function run() {
     // await client.connect();
     const foodCollection = client.db("foodDB").collection("foods");
 
+    app.get("/foods", async (req, res) => {
+      let sortDirection = 1;
+
+      if (req.query.Expired_Date === "-1") {
+        sortDirection = -1;
+      }
+
+      const cursor = foodCollection
+        .find()
+        .sort({ Expired_Date: sortDirection });
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
     app.post("/foods", async (req, res) => {
       const foods = req.body;
       const result = await foodCollection.insertOne(foods);
