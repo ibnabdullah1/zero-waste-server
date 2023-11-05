@@ -29,6 +29,20 @@ async function run() {
     // await client.connect();
     const foodCollection = client.db("foodDB").collection("foods");
 
+    app.get("/highestQuantity", async (req, res) => {
+      const cursor = foodCollection.find().sort({ Quantity: 1 });
+
+      const result = await cursor.toArray();
+
+      const sortedResult = result.sort((a, b) => {
+        const quantityA = parseInt(a.Quantity);
+        const quantityB = parseInt(b.Quantity);
+        return quantityB - quantityA;
+      });
+
+      res.send(sortedResult);
+    });
+
     app.get("/foods", async (req, res) => {
       let sortDirection = 1;
 
