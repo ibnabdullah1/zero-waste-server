@@ -197,6 +197,27 @@ async function run() {
       const result = await foodRequestCollection.find(query).toArray();
       res.send(result);
     });
+
+    app.put("/requestfoods/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedStatus = req.body;
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+
+      console.log(updatedStatus);
+      const UpdateFood = {
+        $set: {
+          Status: updatedStatus.Status,
+        },
+      };
+      const result = await foodRequestCollection.updateOne(
+        query,
+        UpdateFood,
+        options
+      );
+      res.send(result);
+    });
+
     app.get("/req", async (req, res) => {
       const result = await foodRequestCollection.find().toArray();
       res.send(result);
