@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 require("dotenv").config();
@@ -8,7 +8,12 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -23,11 +28,38 @@ const client = new MongoClient(uri, {
   },
 });
 
+const logger = (req, res, next) => {
+  console.log("Log info:", req.method, req.url);
+  next();
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     const foodCollection = client.db("foodDB").collection("foods");
+    const foodRequestCollection = client.db("foodDB").collection("requests");
+
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      console.log(user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "3h",
+      });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        })
+        .send({ success: true });
+    });
+
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log("logging out", user);
+      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+    });
 
     app.get("/searchFood/:name", async (req, res) => {
       const name = req.params.name;
@@ -36,6 +68,13 @@ async function run() {
           $or: [{ Food_Name: { $regex: name, $options: "i" } }],
         })
         .toArray();
+      res.send(result);
+    });
+
+    app.get("/highestQuantity/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodCollection.findOne(query);
       res.send(result);
     });
 
@@ -51,6 +90,13 @@ async function run() {
       });
 
       res.send(sortedResult);
+    });
+
+    app.get("/foods/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodCollection.findOne(query);
+      res.send(result);
     });
 
     app.get("/foods", async (req, res) => {
@@ -70,6 +116,25 @@ async function run() {
     app.post("/foods", async (req, res) => {
       const foods = req.body;
       const result = await foodCollection.insertOne(foods);
+      res.send(result);
+    });
+
+    app.get("/requestfoods", logger, async (req, res) => {
+      let query = {};
+      console.log("Token owner info:", req.user);
+      if (req.user.email !== req.query.email) {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+      if (req.query?.email) {
+        query = { loggedInUserEmail: req.query.email };
+      }
+      const result = await foodRequestCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.post("/requestFood", async (req, res) => {
+      const requests = req.body;
+      const result = await foodRequestCollection.insertOne(requests);
       res.send(result);
     });
 
