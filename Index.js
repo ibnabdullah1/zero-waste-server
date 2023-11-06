@@ -140,6 +140,7 @@ async function run() {
       const result = await foodCollection.findOne(query);
       res.send(result);
     });
+
     app.get("/managefoods", logger, verifyToken, async (req, res) => {
       let query = {};
       console.log("Token owner info:", req.user);
@@ -152,6 +153,7 @@ async function run() {
       const result = await foodCollection.find(query).toArray();
       res.send(result);
     });
+
     app.put("/managefoods/:id", async (req, res) => {
       const id = req.params.id;
       const updatedFood = req.body;
@@ -183,9 +185,20 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/requestfoods", async (req, res) => {
-      const cursor = foodRequestCollection.find();
-      const result = await cursor.toArray();
+    app.get("/requestfoods", logger, verifyToken, async (req, res) => {
+      let query = {};
+      console.log("Token owner info:", req.user);
+      if (req.user.email !== req.query.email) {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+      if (req.query?.email) {
+        query = { loggedInUserEmail: req.query.email };
+      }
+      const result = await foodRequestCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.get("/req", async (req, res) => {
+      const result = await foodRequestCollection.find().toArray();
       res.send(result);
     });
 
