@@ -33,6 +33,21 @@ const logger = (req, res, next) => {
   next();
 };
 
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  console.log("Token in the middleware", token);
+  if (!token) {
+    return res.status(401).send({ message: "Unauthenticated access" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "Unauthenticated access" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -119,16 +134,65 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/requestfoods", logger, async (req, res) => {
+    app.get("/managefoods/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodCollection.findOne(query);
+      res.send(result);
+    });
+    app.get("/managefoods", logger, verifyToken, async (req, res) => {
       let query = {};
       console.log("Token owner info:", req.user);
       if (req.user.email !== req.query.email) {
         return res.status(403).send({ message: "Forbidden access" });
       }
       if (req.query?.email) {
-        query = { loggedInUserEmail: req.query.email };
+        query = { userEmail: req.query.email };
       }
-      const result = await foodRequestCollection.find(query).toArray();
+      const result = await foodCollection.find(query).toArray();
+      res.send(result);
+    });
+    app.put("/managefoods/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedFood = req.body;
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const UpdateFood = {
+        $set: {
+          img: updatedFood.img,
+          userEmail: updatedFood.userEmail,
+          userName: updatedFood.userName,
+          userImage: updatedFood.userImage,
+          Food_Name: updatedFood.Food_Name,
+          Quantity: updatedFood.Quantity,
+          location: updatedFood.location,
+          Expired_Date: updatedFood.Expired_Date,
+          Additional_Notes: updatedFood.Additional_Notes,
+          Status: updatedFood.Status,
+        },
+      };
+      console.log(updatedFood);
+      const result = await foodCollection.updateOne(query, UpdateFood, options);
+      res.send(result);
+    });
+
+    app.delete("/managefoods/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.get("/requestfoods", async (req, res) => {
+      const cursor = foodRequestCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.delete("/requestfoods/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodRequestCollection.deleteOne(query);
       res.send(result);
     });
 
