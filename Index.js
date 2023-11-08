@@ -191,7 +191,6 @@ async function run() {
           Status: updatedFood.Status,
         },
       };
-      console.log(updatedFood);
       const result = await foodCollection.updateOne(query, UpdateFood, options);
       res.send(result);
     });
@@ -221,8 +220,6 @@ async function run() {
       const updatedStatus = req.body;
       const query = { _id: new ObjectId(id) };
       const options = { upsert: true };
-
-      console.log(updatedStatus);
       const UpdateFood = {
         $set: {
           Status: updatedStatus.Status,
@@ -251,6 +248,32 @@ async function run() {
     app.post("/requestFood", async (req, res) => {
       const requests = req.body;
       const result = await foodRequestCollection.insertOne(requests);
+      res.send(result);
+    });
+
+    app.get("/requpdate", async (req, res) => {
+      const result = await foodCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.get("/requpdate/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await foodCollection.findOne(query);
+      res.send(result);
+    });
+    app.put("/requpdate/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedStatus = req.body;
+      const query = { _id: new ObjectId(id) };
+      const UpdateFood = {
+        $set: {
+          Status: updatedStatus.Status,
+        },
+      };
+      console.log(UpdateFood);
+      const result = await foodCollection.updateOne(query, UpdateFood);
+      console.log(result);
       res.send(result);
     });
 
