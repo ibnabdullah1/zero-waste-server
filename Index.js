@@ -1,19 +1,26 @@
 const express = require("express");
-const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
+const cors = require("cors");
 const cookieParser = require("cookie-parser");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
+// app.use(
+//   cors({
+//     origin: ["http://localhost:5173"],
+//     credentials: true,
+//   })
+// );
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173", "https://zero-waste-5fb87.web.app"],
     credentials: true,
   })
 );
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -41,7 +48,9 @@ const verifyToken = (req, res, next) => {
   }
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) {
-      return res.status(401).send({ message: "Unauthenticated access" });
+      return res
+        .status(401)
+        .send({ message: "Unauthenticated access", err: err });
     }
     req.user = decoded;
     next();
@@ -64,8 +73,10 @@ async function run() {
       res
         .cookie("token", token, {
           httpOnly: true,
-          secure: true,
-          sameSite: "none",
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          // secure: true,
+          // sameSite: "none",
         })
         .send({ success: true });
     });
@@ -73,7 +84,14 @@ async function run() {
     app.post("/logout", async (req, res) => {
       const user = req.body;
       console.log("logging out", user);
-      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+      res
+        .clearCookie("token", {
+          maxAge: 0,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
     });
 
     app.get("/searchFood/:name", async (req, res) => {
@@ -86,14 +104,14 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/highestQuantity/:id", async (req, res) => {
+    app.get("/highestquantity/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await foodCollection.findOne(query);
       res.send(result);
     });
 
-    app.get("/highestQuantity", async (req, res) => {
+    app.get("/highestquantity", async (req, res) => {
       const cursor = foodCollection.find().sort({ Quantity: 1 });
 
       const result = await cursor.toArray();
